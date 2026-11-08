@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90s Web Dev Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Scrollbar for IDE feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e24; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f111a; /* Dark IDE background */
+            color: #e5e7eb;
+            overflow: hidden; /* Prevent body scroll, handle inside panels */
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .code-textarea {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            tab-size: 4;
+            background-color: #1e1e24;
+            color: #d4d4d8;
+            outline: none;
+            resize: none;
+        }
+        
+        /* Iframe styling to look like a separate screen */
+        .preview-iframe {
+            background-color: #ffffff; /* 90s sites usually had white or solid color backgrounds, defined in HTML */
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-full">
+
+    <!-- Header -->
+    <header class="h-14 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">
+                &lt;/&gt;
+            </div>
+            <h1 class="text-lg font-semibold tracking-wide text-gray-100" id="app-title">90s Web Dev Simulator</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Timer -->
+            <div class="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded border border-gray-700 shadow-inner">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="timer-display" class="font-mono text-emerald-400 font-bold tracking-wider text-sm">40:00</span>
+            </div>
+            
+            <!-- Language Toggle -->
+            <button id="lang-toggle" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors border border-indigo-500 shadow-sm flex items-center gap-2">
+                <span>RU</span> <span class="text-indigo-300">/</span> <span class="opacity-50">KK</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- Left Panel: Instructions, Criteria, Resources -->
+        <aside class="w-full md:w-1/3 lg:w-[400px] border-r border-gray-700 bg-gray-800/50 flex flex-col shrink-0 relative z-0">
+            <!-- Tabs Header -->
+            <div class="flex border-b border-gray-700">
+                <button class="tab-btn flex-1 py-3 px-2 text-sm font-medium text-indigo-400 border-b-2 border-indigo-500 bg-gray-800 hover:text-indigo-300 transition-colors" data-target="tab-task" id="tab-btn-task">
+                    Задание
+                </button>
+                <button class="tab-btn flex-1 py-3 px-2 text-sm font-medium text-gray-400 border-b-2 border-transparent hover:text-gray-300 hover:bg-gray-800 transition-colors" data-target="tab-criteria" id="tab-btn-criteria">
+                    Критерии
+                </button>
+                <button class="tab-btn flex-1 py-3 px-2 text-sm font-medium text-gray-400 border-b-2 border-transparent hover:text-gray-300 hover:bg-gray-800 transition-colors" data-target="tab-resources" id="tab-btn-resources">
+                    Ресурсы
+                </button>
+            </div>
+
+            <!-- Tabs Content -->
+            <div class="flex-1 overflow-y-auto p-5 text-sm leading-relaxed text-gray-300 space-y-4">
+                
+                <!-- Task Tab -->
+                <div id="tab-task" class="tab-content active">
+                    <h2 class="text-lg font-bold text-white mb-3" id="task-title">Создание сайта из 90-х</h2>
+                    <p id="task-desc-1" class="mb-2">
+                        Ваша задача - создать 4 страницы (<code>index.html</code>, <code>about.html</code>, <code>contact.html</code>, <code>gallery.html</code>) в духе 90-х годов.
+                    </p>
+                    <div class="bg-yellow-900/30 border border-yellow-700/50 p-3 rounded mb-4 shadow-inner">
+                        <strong class="text-yellow-400 block mb-1" id="task-warning-title">Важное условие:</strong>
+                        <span id="task-warning-desc">Полный запрет на использование CSS! Верстка должна быть табличной, стилизация только через HTML атрибуты (bgcolor, align, width, font и т.д.).</span>
+                    </div>
+                    
+                    <h3 class="font-semibold text-gray-200 mt-4 mb-2" id="task-layout-title">Структура и Макет</h3>
+                    <p id="task-layout-desc" class="mb-2">
+                        Постройте страницы на основе одной из схем, представленных на изображении <code>image_4cf5b8.png</code> (Шапка, меню, контент, подвал).
+                    </p>
+                    
+                    <h3 class="font-semibold text-gray-200 mt-4 mb-2" id="task-tags-title">Обязательные теги:</h3>
+                    <div class="flex flex-wrap gap-1 mb-4 text-xs font-mono text-indigo-300">
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">h1-h6</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">p</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">form</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">input</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">label</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">img</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">a</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">marquee</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">ul</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">ol</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">strong</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">i</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">table</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">hr</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">blockquote</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">small</span>
+                        <span class="bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">&lt;!-- --&gt;</span>
+                    </div>
+                </div>
+
+                <!-- Criteria Tab -->
+                <div id="tab-criteria" class="tab-content">
+                    <h2 class="text-lg font-bold text-white mb-4" id="crit-title">Критерии оценивания (10 баллов)</h2>
+                    <p class="text-xs text-gray-400 mb-4" id="crit-subtitle">Система оценивания: Алматы, Казахстан</p>
+                    
+                    <ul class="space-y-3">
+                        <li class="flex gap-3">
+                            <span class="font-bold text-indigo-400 w-8 shrink-0">1-2</span>
+                            <span id="crit-1">Базовая структура и навигация между 4 страницами.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="font-bold text-indigo-400 w-8 shrink-0">3-4</span>
+                            <span id="crit-2">Табличная верстка строго по схеме (image_4cf5b8.png).</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="font-bold text-indigo-400 w-8 shrink-0">5-6</span>
+                            <span id="crit-3">Использование всех текстовых тегов и списков.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="font-bold text-indigo-400 w-8 shrink-0">7-8</span>
+                            <span id="crit-4">Изображения, marquee и рабочие ссылки.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="font-bold text-emerald-400 w-8 shrink-0">9-10</span>
+                            <span id="crit-5">Формы обратной связи, строгий стиль 90-х (только атрибуты), наличие комментариев.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Resources Tab -->
+                <div id="tab-resources" class="tab-content">
+                    <h2 class="text-lg font-bold text-white mb-4" id="res-title">Полезные материалы</h2>
+                    
+                    <div class="space-y-4">
+                        <a href="https://giphy.com/explore/90s-website" target="_blank" class="block p-3 bg-gray-900 border border-gray-700 rounded hover:border-indigo-500 transition-colors group">
+                            <div class="font-semibold text-indigo-400 group-hover:text-indigo-300 flex items-center justify-between" id="res-link-1">
+                                GIF Анимации 90-х
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">https://giphy.com/explore/90s-website</div>
+                        </a>
+                        
+                        <a href="https://website-90s.utils.com/" target="_blank" class="block p-3 bg-gray-900 border border-gray-700 rounded hover:border-indigo-500 transition-colors group">
+                            <div class="font-semibold text-indigo-400 group-hover:text-indigo-300 flex items-center justify-between" id="res-link-2">
+                                Генератор 90-х
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">https://website-90s.utils.com/</div>
+                        </a>
+                        
+                        <a href="https://www.lipsum.com/" target="_blank" class="block p-3 bg-gray-900 border border-gray-700 rounded hover:border-indigo-500 transition-colors group">
+                            <div class="font-semibold text-indigo-400 group-hover:text-indigo-300 flex items-center justify-between" id="res-link-3">
+                                Текст-рыба (Lorem Ipsum)
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">https://www.lipsum.com/</div>
+                        </a>
+                        
+                        <a href="https://picsum.photos/" target="_blank" class="block p-3 bg-gray-900 border border-gray-700 rounded hover:border-indigo-500 transition-colors group">
+                            <div class="font-semibold text-indigo-400 group-hover:text-indigo-300 flex items-center justify-between" id="res-link-4">
+                                Случайные фото
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">https://picsum.photos/</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Editor & Preview Split -->
+        <section class="flex-1 flex flex-col h-full overflow-hidden">
+            
+            <!-- Editor Top Half -->
+            <div class="h-1/2 flex flex-col border-b border-gray-700 bg-[#1e1e24] shadow-md z-10 relative">
+                <!-- Editor Header -->
+                <div class="h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 justify-between shrink-0">
+                    <div class="flex items-center gap-2 text-sm text-gray-300">
+                        <svg class="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        <span id="editor-title" class="font-mono">index.html (HTML & Attributes Only)</span>
+                    </div>
+                    <button id="reset-code-btn" class="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1" title="Сбросить код / Кодты қалпына келтіру">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span id="reset-btn-text">Сбросить</span>
+                    </button>
+                </div>
+                
+                <!-- Textarea Editor -->
+                <textarea id="html-editor" class="code-textarea flex-1 w-full h-full p-4 border-none resize-none font-mono text-sm leading-relaxed" spellcheck="false" placeholder="Напишите ваш HTML код здесь..."></textarea>
+            </div>
+
+            <!-- Preview Bottom Half -->
+            <div class="h-1/2 flex flex-col bg-gray-900 relative">
+                <!-- Preview Header -->
+                <div class="h-10 border-b border-gray-700 flex items-center px-4 shrink-0 bg-gray-900 shadow-sm">
+                    <div class="flex items-center gap-2 text-sm text-gray-300">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        <span id="preview-title" class="font-semibold">Live Preview / Браузер</span>
+                    </div>
+                </div>
+                
+                <!-- Iframe Preview -->
+                <iframe id="preview-frame" class="preview-iframe w-full flex-1 border-none bg-white"></iframe>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // Data and State
+        let currentLang = 'ru'; // 'ru' or 'kk'
+        let timeLeft = 40 * 60; // 40 minutes in seconds
+        let timerInterval;
+
+        const defaultHTML = `<!-- Моя первая страница из 90-х! -->
+<html>
+<head>
+    <title>Моя Крутая Домашняя Страница</title>
+</head>
+<body bgcolor="#000080" text="#FFFFFF" link="#00FFFF" vlink="#FF00FF">
+
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+        <!-- ШАПКА САЙТА (Схема 1) -->
+        <tr>
+            <td colspan="2" bgcolor="#000000" align="center">
+                <h1><marquee behavior="alternate" scrollamount="5"><font color="#FFFF00">ДОБРО ПОЖАЛОВАТЬ В 1998 ГОД!</font></marquee></h1>
+                <hr width="80%" size="3" color="#FF0000">
+            </td>
+        </tr>
+        
+        <!-- МЕНЮ И КОНТЕНТ -->
+        <tr>
+            <!-- Боковое меню -->
+            <td width="20%" valign="top" bgcolor="#404040">
+                <br>
+                <ul>
+                    <li><a href="index.html"><strong>Главная</strong></a></li>
+                    <li><a href="about.html">О Сайте</a></li>
+                    <li><a href="gallery.html">Галерея</a></li>
+                    <li><a href="contact.html">Контакты</a></li>
+                </ul>
+                <center>
+                    <img src="https://picsum.photos/100/100" border="3" alt="Аватар">
+                </center>
+                <br>
+            </td>
+            
+            <!-- Основной контент -->
+            <td width="80%" valign="top" cellpadding="10">
+                <table width="95%" align="center" border="1" bordercolor="#FFFFFF" bgcolor="#0000A0">
+                    <tr>
+                        <td>
+                            <h2><i>Обо мне и моем сайте</i></h2>
+                            <p>
+                                Всем привет! Это мой персональный сайт. Я сделал его <u>полностью на таблицах</u>. 
+                                Никакого CSS, только хардкор и HTML атрибуты!
+                            </p>
+                            
+                            <blockquote>
+                                "В будущем у каждого будет своя страничка в интернете!" - <small>Кто-то умный</small>
+                            </blockquote>
+                            
+                            <h3>Оставьте сообщение:</h3>
+                            <form action="#" method="get">
+                                <label>Ваше Имя: <input type="text" name="name" size="20"></label><br><br>
+                                <label>Сообщение: <input type="text" name="msg" size="40"></label><br><br>
+                                <input type="submit" value="Отправить в Гостевую Книгу">
+                            </form>
+                            
+                            <br>
+                            <p>Мои любимые вещи:</p>
+                            <ol>
+                                <li>Компьютеры</li>
+                                <li>HTML верстка</li>
+                                <li>Модемы 56k</li>
+                            </ol>
+                        </td>
+                    </tr>
+                </table>
+                <br>
+            </td>
+        </tr>
+        
+        <!-- ПОДВАЛ САЙТА -->
+        <tr>
+            <td colspan="2" bgcolor="#000000" align="center">
+                <font size="2" color="#AAAAAA">
+                    <br>Лучше всего просматривать в Netscape Navigator.<br>
+                    Copyright &copy; 1998 МойСайт.narod.ru<br>
+                </font>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>`;
+
+        // Translation Dictionary
+        const translations = {
+            ru: {
+                appTitle: "Симулятор верстки 90-х",
+                langText: "<span><b>RU</b></span> <span class='text-indigo-300'>/</span> <span class='opacity-50 hover:opacity-100 transition-opacity cursor-pointer' onclick='setLang(\"kk\")'>KK</span>",
+                tabTask: "Задание",
+                tabCriteria: "Критерии",
+                tabResources: "Ресурсы",
+                taskTitle: "Создание сайта из 90-х",
+                taskDesc1: "Ваша задача - создать 4 страницы (<code>index.html</code>, <code>about.html</code>, <code>contact.html</code>, <code>gallery.html</code>) в духе 90-х годов.",
+                taskWarningTitle: "Важное условие:",
+                taskWarningDesc: "Полный запрет на использование CSS! Верстка должна быть табличной, стилизация только через HTML атрибуты (bgcolor, align, width, font и т.д.).",
+                taskLayoutTitle: "Структура и Макет",
+                taskLayoutDesc: "Постройте страницы на основе одной из схем, представленных на изображении <code>image_4cf5b8.png</code> (Шапка, меню, контент, подвал).",
+                taskTagsTitle: "Обязательные теги:",
+                critTitle: "Критерии оценивания (10 баллов)",
+                critSubtitle: "Система оценивания: Алматы, Казахстан",
+                crit1: "Базовая структура и навигация между 4 страницами.",
+                crit2: "Табличная верстка строго по схеме (image_4cf5b8.png).",
+                crit3: "Использование всех текстовых тегов и списков.",
+                crit4: "Изображения, marquee и рабочие ссылки.",
+                crit5: "Формы обратной связи, строгий стиль 90-х (только атрибуты), наличие комментариев.",
+                resTitle: "Полезные материалы",
+                resLink1: "GIF Анимации 90-х",
+                resLink2: "Генератор 90-х",
+                resLink3: "Текст-рыба (Lorem Ipsum)",
+                resLink4: "Случайные фото",
+                editorTitle: "index.html (только HTML и атрибуты)",
+                previewTitle: "Live Preview / Браузер",
+                resetBtn: "Сбросить"
+            },
+            kk: {
+                appTitle: "90-шы жылдардағы веб-әзірлеу симуляторы",
+                langText: "<span class='opacity-50 hover:opacity-100 transition-opacity cursor-pointer' onclick='setLang(\"ru\")'>RU</span> <span class='text-indigo-300'>/</span> <span><b>KK</b></span>",
+                tabTask: "Тапсырма",
+                tabCriteria: "Критерийлер",
+                tabResources: "Ресурстар",
+                taskTitle: "90-шы жылдардағы сайтты құру",
+                taskDesc1: "Сіздің міндетіңіз - 90-шы жылдар рухында 4 бет (<code>index.html</code>, <code>about.html</code>, <code>contact.html</code>, <code>gallery.html</code>) жасау.",
+                taskWarningTitle: "Маңызды шарт:",
+                taskWarningDesc: "CSS пайдалануға толық тыйым салынады! Макет кестелік болуы керек, стильдеу тек HTML атрибуттары (bgcolor, align, width, font және т.б.) арқылы жасалады.",
+                taskLayoutTitle: "Құрылым және Макет",
+                taskLayoutDesc: "Беттерді <code>image_4cf5b8.png</code> суретінде көрсетілген схемалардың біріне (Шапка, мәзір, контент, жертөле) негіздеп құрыңыз.",
+                taskTagsTitle: "Міндетті тегтер:",
+                critTitle: "Бағалау критерийлері (10 балл)",
+                critSubtitle: "Бағалау жүйесі: Алматы, Қазақстан",
+                crit1: "Базалық құрылым және 4 бет арасындағы навигация.",
+                crit2: "Сызба (image_4cf5b8.png) бойынша қатаң кестелік макет.",
+                crit3: "Барлық мәтіндік тегтер мен тізімдерді қолдану.",
+                crit4: "Суреттер, marquee және жұмыс істейтін сілтемелер.",
+                crit5: "Кері байланыс формалары, 90-шы жылдардың қатаң стилі (тек атрибуттар), түсініктемелердің болуы.",
+                resTitle: "Пайдалы материалдар",
+                resLink1: "90-шы жылдар GIF анимациялары",
+                resLink2: "90-шы жылдар генераторы",
+                resLink3: "Лорем Ипсум (Lorem Ipsum)",
+                resLink4: "Кездейсоқ суреттер",
+                editorTitle: "index.html (тек HTML және атрибуттар)",
+                previewTitle: "Live Preview / Браузер",
+                resetBtn: "Қалпына келтіру"
+            }
+        };
+
+        // DOM Elements
+        const ui = {
+            langToggle: document.getElementById('lang-toggle'),
+            appTitle: document.getElementById('app-title'),
+            tabBtnTask: document.getElementById('tab-btn-task'),
+            tabBtnCriteria: document.getElementById('tab-btn-criteria'),
+            tabBtnResources: document.getElementById('tab-btn-resources'),
+            taskTitle: document.getElementById('task-title'),
+            taskDesc1: document.getElementById('task-desc-1'),
+            taskWarningTitle: document.getElementById('task-warning-title'),
+            taskWarningDesc: document.getElementById('task-warning-desc'),
+            taskLayoutTitle: document.getElementById('task-layout-title'),
+            taskLayoutDesc: document.getElementById('task-layout-desc'),
+            taskTagsTitle: document.getElementById('task-tags-title'),
+            critTitle: document.getElementById('crit-title'),
+            critSubtitle: document.getElementById('crit-subtitle'),
+            crit1: document.getElementById('crit-1'),
+            crit2: document.getElementById('crit-2'),
+            crit3: document.getElementById('crit-3'),
+            crit4: document.getElementById('crit-4'),
+            crit5: document.getElementById('crit-5'),
+            resTitle: document.getElementById('res-title'),
+            resLink1: document.getElementById('res-link-1'),
+            resLink2: document.getElementById('res-link-2'),
+            resLink3: document.getElementById('res-link-3'),
+            resLink4: document.getElementById('res-link-4'),
+            editorTitle: document.getElementById('editor-title'),
+            previewTitle: document.getElementById('preview-title'),
+            resetBtnText: document.getElementById('reset-btn-text'),
+            htmlEditor: document.getElementById('html-editor'),
+            previewFrame: document.getElementById('preview-frame'),
+            timerDisplay: document.getElementById('timer-display'),
+            resetBtn: document.getElementById('reset-code-btn')
+        };
+
+        // Functions
+        window.setLang = function(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+            
+            ui.appTitle.innerText = t.appTitle;
+            ui.langToggle.innerHTML = t.langText;
+            ui.tabBtnTask.innerText = t.tabTask;
+            ui.tabBtnCriteria.innerText = t.tabCriteria;
+            ui.tabBtnResources.innerText = t.tabResources;
+            
+            ui.taskTitle.innerText = t.taskTitle;
+            ui.taskDesc1.innerHTML = t.taskDesc1;
+            ui.taskWarningTitle.innerText = t.taskWarningTitle;
+            ui.taskWarningDesc.innerText = t.taskWarningDesc;
+            ui.taskLayoutTitle.innerText = t.taskLayoutTitle;
+            ui.taskLayoutDesc.innerHTML = t.taskLayoutDesc;
+            ui.taskTagsTitle.innerText = t.taskTagsTitle;
+            
+            ui.critTitle.innerText = t.critTitle;
+            ui.critSubtitle.innerText = t.critSubtitle;
+            ui.crit1.innerText = t.crit1;
+            ui.crit2.innerText = t.crit2;
+            ui.crit3.innerText = t.crit3;
+            ui.crit4.innerText = t.crit4;
+            ui.crit5.innerText = t.crit5;
+            
+            ui.resTitle.innerText = t.resTitle;
+            // Handle updating text nodes of res links without removing SVG icons
+            updateResLinkText(ui.resLink1, t.resLink1);
+            updateResLinkText(ui.resLink2, t.resLink2);
+            updateResLinkText(ui.resLink3, t.resLink3);
+            updateResLinkText(ui.resLink4, t.resLink4);
+            
+            ui.editorTitle.innerText = t.editorTitle;
+            ui.previewTitle.innerText = t.previewTitle;
+            ui.resetBtnText.innerText = t.resetBtn;
+        }
+
+        function updateResLinkText(element, text) {
+            // Replaces just the first text node, keeping the SVG intact
+            if(element.childNodes[0].nodeType === 3) {
+                element.childNodes[0].nodeValue = text + " ";
+            } else {
+                element.prepend(document.createTextNode(text + " "));
+            }
+        }
+
+        function updatePreview() {
+            const htmlContent = ui.htmlEditor.value;
+            ui.previewFrame.srcdoc = htmlContent;
+        }
+
+        function initTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    ui.timerDisplay.innerText = "00:00";
+                    ui.timerDisplay.classList.remove('text-emerald-400');
+                    ui.timerDisplay.classList.add('text-red-500');
+                    return;
+                }
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                ui.timerDisplay.innerText = `${minutes}:${seconds}`;
+                
+                if (timeLeft < 300) { // last 5 minutes warning
+                    ui.timerDisplay.classList.remove('text-emerald-400');
+                    ui.timerDisplay.classList.add('text-orange-400');
+                }
+            }, 1000);
+        }
+
+        // Event Listeners
+        
+        // Editor live update
+        ui.htmlEditor.addEventListener('input', updatePreview);
+        
+        // Reset code button
+        ui.resetBtn.addEventListener('click', () => {
+            if(confirm(currentLang === 'ru' ? 'Вы уверены, что хотите сбросить код до начального?' : 'Кодты бастапқы қалпына келтіргіңіз келетініне сенімдісіз бе?')) {
+                ui.htmlEditor.value = defaultHTML;
+                updatePreview();
+            }
+        });
+
+        // Tab Switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active classes
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('text-indigo-400', 'border-indigo-500');
+                    b.classList.add('text-gray-400', 'border-transparent');
+                });
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active classes to clicked
+                const targetId = e.currentTarget.getAttribute('data-target');
+                e.currentTarget.classList.remove('text-gray-400', 'border-transparent');
+                e.currentTarget.classList.add('text-indigo-400', 'border-indigo-500');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        // Initialize App
+        window.onload = function() {
+            setLang('ru');
+            ui.htmlEditor.value = defaultHTML;
+            updatePreview();
+            initTimer();
+        };
+
+    </script>
+</body>
+</html>
